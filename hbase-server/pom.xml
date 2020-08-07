@@ -515,6 +515,30 @@
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <artifactId>ratis-common</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>ratis-client</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>ratis-server</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>ratis-netty</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>ratis-grpc</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>ratis-tools</artifactId>
+      <groupId>org.apache.ratis</groupId>
+    </dependency>
   </dependencies>
   <profiles>
     <!-- Needs to make the profile in apache parent pom -->

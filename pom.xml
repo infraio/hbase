@@ -1604,6 +1604,7 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <hbase-thirdparty.version>3.3.0</hbase-thirdparty.version>
+    <ratis.version>1.0.0</ratis.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -2414,6 +2415,36 @@
             <artifactId>javax.activation-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-common</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-client</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-server</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-netty</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-grpc</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>ratis-tools</artifactId>
+        <groupId>org.apache.ratis</groupId>
+        <version>${ratis.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
