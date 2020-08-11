@@ -45,8 +45,6 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(RecoveredReplicationSource.class);
 
-  private Path walDir;
-
   private String actualPeerId;
 
   @Override
@@ -56,7 +54,6 @@ public class RecoveredReplicationSource extends ReplicationSource {
     MetricsSource metrics) throws IOException {
     super.init(conf, fs, walDir, manager, queueStorage, replicationPeer, server, peerClusterZnode,
       clusterId, walFileLengthProvider, metrics);
-    this.walDir = walDir;
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
   }
 

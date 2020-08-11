@@ -99,6 +99,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected Configuration conf;
   protected ReplicationQueueInfo replicationQueueInfo;
 
+  protected Path walDir;
+
   // The manager of all sources to which we ping back our progress
   ReplicationSourceManager manager;
   // Should we stop everything?
@@ -143,6 +145,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   private int waitOnEndpointSeconds = -1;
 
   private Thread initThread;
+  private Thread fetchWALsThread;
 
   /**
    * WALs to replicate.
@@ -159,7 +162,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
    * @see WALEntryFilter
    */
   private final List<WALEntryFilter> baseFilterOutWALEntries;
-
+  
   ReplicationSource() {
     // Default, filters *in* all WALs but meta WALs & filters *out* all WALEntries of System Tables.
     this(p -> !AbstractFSWALProvider.isMetaFile(p),
@@ -194,6 +197,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       MetricsSource metrics) throws IOException {
     this.server = server;
     this.conf = HBaseConfiguration.create(conf);
+    this.walDir = walDir;
     this.waitOnEndpointSeconds =
       this.conf.getInt(WAIT_ON_ENDPOINT_SECONDS, DEFAULT_WAIT_ON_ENDPOINT_SECONDS);
     decorateConf();
@@ -217,6 +221,32 @@ public class ReplicationSource implements ReplicationSourceInterface {
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
     this.walFileLengthProvider = walFileLengthProvider;
+
+    fetchWALsThread = new Thread(() -> {
+      for (;;) {
+        try {
+          this.queueStorage.getWALsInQueue(this.server.getServerName(), getQueueId())
+              .forEach(wal -> {
+                String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
+                PriorityBlockingQueue<Path> queue = queues.get(logPrefix);
+                Path walPath = new Path(walDir, wal);
+                if (queue == null || !queue.contains(walPath)) {
+                  enqueueLog(walPath);
+                }
+              });
+        } catch (ReplicationException e) {
+          LOG.warn("Failed to read wals in queue {}", getQueueId(), e);
+        }
+        try {
+          TimeUnit.SECONDS.sleep(60);
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted when sleep", e);
+          Thread.currentThread().interrupt();
+        }
+      }
+    }, "fetchWALsThread.replicationSource," + this.queueId);
+    fetchWALsThread.start();
+
     LOG.info("queueId={}, ReplicationSource: {}, currentBandwidth={}", queueId,
       replicationPeer.getId(), this.currentBandwidth);
   }
