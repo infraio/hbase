@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * the active master of the cluster.
  */
 @InterfaceAudience.Private
-public class ActiveMasterManager extends ZKListener {
+public class ActiveMasterManager extends ZKListener implements HMasterHAService {
   private static final Logger LOG = LoggerFactory.getLogger(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
@@ -124,6 +124,7 @@ public class ActiveMasterManager extends ZKListener {
     }
   }
 
+  @Override
   public Optional<ServerName> getActiveMasterServerName() {
     if (!clusterHasActiveMaster.get()) {
       return Optional.empty();
@@ -186,7 +187,8 @@ public class ActiveMasterManager extends ZKListener {
    *   master was running or if some other problem (zookeeper, stop flag has been
    *   set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster(
+  @Override
+  public boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
     String backupZNode = ZNodePaths.joinZNode(
       this.watcher.getZNodePaths().backupMasterAddressesZNode, this.sn.toString());
@@ -277,10 +279,8 @@ public class ActiveMasterManager extends ZKListener {
     return false;
   }
 
-  /**
-   * @return True if cluster has an active master.
-   */
-  boolean hasActiveMaster() {
+  @Override
+  public boolean hasActiveMaster() {
     try {
       if (ZKUtil.checkExists(watcher, watcher.getZNodePaths().masterAddressZNode) >= 0) {
         return true;
@@ -293,6 +293,7 @@ public class ActiveMasterManager extends ZKListener {
     return false;
   }
 
+  @Override
   public void stop() {
     try {
       synchronized (clusterHasActiveMaster) {
