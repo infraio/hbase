@@ -141,16 +141,7 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
     this.globalMetrics = globalMetrics;
   }
 
-  /**
-   * Adds a normal source per registered peer cluster and tries to process all old region server wal
-   * queues
-   * <p>
-   * The returned future is for adoptAbandonedQueues task.
-   */
-  Future<?> init() throws IOException {
-    for (String id : this.replicationPeers.getAllPeerIds()) {
-      addSource(id);
-    }
+  void init() throws IOException {
   }
 
   /**
@@ -290,10 +281,7 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
    * Terminate the replication on this region server
    */
   public void join() {
-    this.executor.shutdown();
-    for (ReplicationSourceInterface source : this.sources.values()) {
-      source.terminate("Region server is closing");
-    }
+
   }
 
   /**
@@ -304,15 +292,6 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
   public Map<String, Map<String, NavigableSet<String>>> getWALs()
     throws ReplicationException {
     Map<String, Map<String, NavigableSet<String>>> walsById = new HashMap<>();
-    for (ReplicationSourceInterface source : sources.values()) {
-      String queueId = source.getQueueId();
-      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
-      walsById.put(queueId, walsByGroup);
-      for (String wal : this.queueStorage.getWALsInQueue(this.server.getServerName(), queueId)) {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal);
-        walsByGroup.computeIfAbsent(walPrefix, p -> new TreeSet<>()).add(wal);
-      }
-    }
     return Collections.unmodifiableMap(walsById);
   }
 
@@ -341,7 +320,7 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
    * @return list of all normal sources
    */
   public List<ReplicationSourceInterface> getSources() {
-    return new ArrayList<>(this.sources.values());
+    return new ArrayList<>();
   }
 
   /**
@@ -358,7 +337,7 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
    */
   @VisibleForTesting
   public ReplicationSourceInterface getSource(String peerId) {
-    return this.sources.get(peerId);
+    return null;
   }
 
   @VisibleForTesting
@@ -436,72 +415,7 @@ public class OffloadReplicationSourceManager implements ReplicationListener {
    */
   public String getStats() {
     StringBuilder stats = new StringBuilder();
-    // Print stats that apply across all Replication Sources
-    stats.append("Global stats: ");
-    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed().get()).append("B, Limit=")
-      .append(getTotalBufferLimit()).append("B\n");
-    for (ReplicationSourceInterface source : this.sources.values()) {
-      stats.append("Normal source for cluster " + source.getPeerId() + ": ");
-      stats.append(source.getStats() + "\n");
-    }
-    for (ReplicationSourceInterface oldSource : oldsources) {
-      stats.append("Recovered source for cluster/machine(s) " + oldSource.getPeerId() + ": ");
-      stats.append(oldSource.getStats() + "\n");
-    }
     return stats.toString();
-  }
-
-  public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-    throws IOException {
-    for (ReplicationSourceInterface source : this.sources.values()) {
-      throwIOExceptionWhenFail(() -> addHFileRefs(source.getPeerId(), tableName, family, pairs));
-    }
-  }
-
-  /**
-   * Add hfile names to the queue to be replicated.
-   * @param peerId the replication peer id
-   * @param tableName Name of the table these files belongs to
-   * @param family Name of the family these files belong to
-   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
-   *          will be added in the queue for replication}
-   * @throws ReplicationException If failed to add hfile references
-   */
-  private void addHFileRefs(String peerId, TableName tableName, byte[] family,
-    List<Pair<Path, Path>> pairs) throws ReplicationException {
-    // Only the normal replication source update here, its peerId is equals to queueId.
-    MetricsSource metrics = sourceMetrics.get(peerId);
-    ReplicationPeer replicationPeer = replicationPeers.getPeer(peerId);
-    Set<String> namespaces = replicationPeer.getNamespaces();
-    Map<TableName, List<String>> tableCFMap = replicationPeer.getTableCFs();
-    if (tableCFMap != null) { // All peers with TableCFs
-      List<String> tableCfs = tableCFMap.get(tableName);
-      if (tableCFMap.containsKey(tableName)
-        && (tableCfs == null || tableCfs.contains(Bytes.toString(family)))) {
-        this.queueStorage.addHFileRefs(peerId, pairs);
-        metrics.incrSizeOfHFileRefsQueue(pairs.size());
-      } else {
-        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
-          tableName, Bytes.toString(family), peerId);
-      }
-    } else if (namespaces != null) { // Only for set NAMESPACES peers
-      if (namespaces.contains(tableName.getNamespaceAsString())) {
-        this.queueStorage.addHFileRefs(peerId, pairs);
-        metrics.incrSizeOfHFileRefsQueue(pairs.size());
-      } else {
-        LOG.debug("HFiles will not be replicated belonging to the table {} family {} to peer id {}",
-          tableName, Bytes.toString(family), peerId);
-      }
-    } else {
-      // user has explicitly not defined any table cfs for replication, means replicate all the
-      // data
-      this.queueStorage.addHFileRefs(peerId, pairs);
-      metrics.incrSizeOfHFileRefsQueue(pairs.size());
-    }
-  }
-
-  int activeFailoverTaskCount() {
-    return executor.getActiveCount();
   }
 
   MetricsReplicationGlobalSourceSource getGlobalMetrics() {

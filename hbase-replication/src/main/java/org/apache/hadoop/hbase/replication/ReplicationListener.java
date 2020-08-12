@@ -33,5 +33,5 @@ public interface ReplicationListener {
    * A region server has been removed from the local cluster
    * @param regionServer the removed region server
    */
-  public void regionServerRemoved(String regionServer);
+  void regionServerRemoved(String regionServer);
 }

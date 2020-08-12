@@ -244,7 +244,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * </ol>
    * @param peerId the id of replication peer
    */
-  public void addPeer(String peerId) throws IOException {
+  void addPeer(String peerId) throws IOException {
     boolean added = false;
     try {
       added = this.replicationPeers.addPeer(peerId);
@@ -268,7 +268,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * </ol>
    * @param peerId the id of the replication peer
    */
-  public void removePeer(String peerId) {
+  void removePeer(String peerId) {
     ReplicationPeer peer = replicationPeers.removePeer(peerId);
     String terminateMessage = "Replication stream was removed by a user";
     List<ReplicationSourceInterface> oldSourcesToDelete = new ArrayList<>();
@@ -331,7 +331,6 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param peerId the id of the replication peer
    * @return the source that was created
    */
-  @VisibleForTesting
   ReplicationSourceInterface addSource(String peerId) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
@@ -373,7 +372,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * </p>
    * @param peerId the id of the sync replication peer
    */
-  public void drainSources(String peerId) throws IOException, ReplicationException {
+  void drainSources(String peerId) throws IOException, ReplicationException {
     String terminateMessage = "Sync replication peer " + peerId +
       " is transiting to STANDBY. Will close the previous replication source and open a new one";
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
@@ -430,7 +429,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * replication queue storage and only to enqueue all logs to the new replication source
    * @param peerId the id of the replication peer
    */
-  public void refreshSources(String peerId) throws ReplicationException, IOException {
+  void refreshSources(String peerId) throws ReplicationException, IOException {
     String terminateMessage = "Peer " + peerId +
       " state or config changed. Will close the previous replication source and open a new one";
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
@@ -503,7 +502,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Clear the metrics and related replication queue of the specified old source
    * @param src source to clear
    */
-  void removeSource(ReplicationSourceInterface src) {
+  private void removeSource(ReplicationSourceInterface src) {
     LOG.info("Done with the queue " + src.getQueueId());
     this.sources.remove(src.getPeerId());
     // Delete queue from storage and memory
@@ -548,8 +547,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
+  @InterfaceAudience.Private
   public void preLogRoll(Path newLog) throws IOException {
     String logName = newLog.getName();
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(logName);
@@ -567,9 +565,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
   }
 
-  // public because of we call it in TestReplicationEmptyWALRecovery
-  @VisibleForTesting
-  public void postLogRoll(Path newLog) throws IOException {
+  @InterfaceAudience.Private
+  public void postLogRoll(Path newLog) {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
